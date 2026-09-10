@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Shopper</title>
+    <style>
+        :root { color-scheme: light; font-family: Arial, sans-serif; }
+        body { margin: 0; background: #f4f1eb; color: #202420; }
+        main { max-width: 1100px; margin: 0 auto; padding: 36px 20px; }
+        h1 { margin-bottom: 4px; }
+        .panel { background: white; border: 1px solid #ddd6ca; padding: 22px; margin-top: 20px; }
+        form { display: grid; gap: 12px; }
+        .grid { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 12px; align-items: end; }
+        label { display: grid; gap: 6px; font-weight: 600; }
+        input, select, button { box-sizing: border-box; padding: 10px; font: inherit; }
+        button { cursor: pointer; border: 0; background: #174a45; color: white; }
+        button.secondary { background: #78694f; }
+        table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+        th, td { text-align: left; padding: 10px 6px; border-bottom: 1px solid #e4ded4; }
+        .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+        .metric { background: #edf3ed; padding: 14px; }
+        .message { padding: 10px; margin-top: 12px; background: #fff1c7; }
+        @media (max-width: 760px) { .grid, .totals { grid-template-columns: 1fr; } table { font-size: 13px; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>PERSONAL_SHOPPER_APP</h1>
+    <p>Cotizador de productos comprados en Estados Unidos y vendidos en Colombia</p>
+
+    <div class="message" th:if="${error}" th:text="${error}"></div>
+    <div class="message" th:if="${success}" th:text="${success}"></div>
+
+    <section class="panel">
+        <h2>Agregar producto</h2>
+        <form method="post" action="/agregar">
+            <div class="grid">
+                <label>Producto <input name="product" required></label>
+                <label>Categoría
+                    <select name="categoryName">
+                        <option th:each="category : ${categories}" th:value="${category.name}" th:text="${category.name}"></option>
+                    </select>
+                </label>
+                <label>Precio USD <input name="priceUsd" type="number" min="0.01" step="0.01" required></label>
+                <label>TRM manual <input name="trm" type="number" min="1" step="0.01" value="3200" required></label>
+            </div>
+            <button type="submit">Agregar producto</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Productos de la cotización</h2>
+        <p th:if="${#lists.isEmpty(items)}">Agrega uno o varios productos para iniciar.</p>
+        <table th:if="${!#lists.isEmpty(items)}">
+            <thead><tr><th>Producto</th><th>Categoría</th><th>USD</th><th>Costo COP</th><th>Precio cliente</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="item, stat : ${items}">
+                <td th:text="${item.product}"></td>
+                <td th:text="${item.category}"></td>
+                <td th:text="${item.priceUsd}"></td>
+                <td th:text="${item.costCop}"></td>
+                <td th:text="${item.customerPriceCop}"></td>
+                <td th:text="${item.status}"></td>
+                <td><form method="post" th:action="@{'/quitar/' + ${stat.index}}"><button class="secondary" type="submit">Quitar</button></form></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="totals">
+            <div class="metric"><strong>Costo total</strong><br><span th:text="${totalCost}"></span> COP</div>
+            <div class="metric"><strong>Precio cliente</strong><br><span th:text="${totalPrice}"></span> COP</div>
+            <div class="metric"><strong>Ganancia</strong><br><span th:text="${totalProfit}"></span> COP</div>
+        </div>
+        <form method="post" action="/guardar" th:if="${!#lists.isEmpty(items)}" style="margin-top: 18px">
+            <label>TRM utilizada <input name="trm" type="number" min="1" step="0.01" value="3200" required></label>
+            <button type="submit">Guardar cotización</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>
