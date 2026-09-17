@@ -15,6 +15,15 @@ def round_up_to_10000(value: Decimal) -> Decimal:
     return (value / ROUNDING_UNIT_COP).to_integral_value(rounding=ROUND_CEILING) * ROUNDING_UNIT_COP
 
 
+def surcharge_rate_from_percent(percent: Decimal | int | float | str) -> Decimal:
+    value = Decimal(str(percent))
+    if value < 0 or value > 100:
+        raise ValueError("El porcentaje de recargo debe estar entre 0% y 100%.")
+    if value % Decimal("10") != 0:
+        raise ValueError("El porcentaje de recargo debe ser un múltiplo de 10.")
+    return value / Decimal("100")
+
+
 def calculate_item(
     product: str,
     category: str,
@@ -39,7 +48,7 @@ def calculate_item(
     price_by_rate = cost_cop * (Decimal("1") + surcharge_rate)
     price_by_minimum = cost_cop + minimum_profit
     customer_price_cop = round_up_to_10000(max(price_by_rate, price_by_minimum))
-    profit_cop = customer_price_cop - cost_cop
+    profit_cop = round_up_to_10000(customer_price_cop - cost_cop)
 
     if profit_cop < 0:
         status = "PERDIDA"

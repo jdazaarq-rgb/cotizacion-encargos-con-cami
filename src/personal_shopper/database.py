@@ -16,6 +16,11 @@ CREATE TABLE IF NOT EXISTS categories (
     active INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS quotes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trm NUMERIC NOT NULL,
@@ -55,9 +60,15 @@ def initialize_database(
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with connect(db_path) as connection:
         connection.executescript(SCHEMA)
-        category_count = connection.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
-        if category_count == 0 and excel_path and Path(excel_path).exists():
+        if not connection.execute(
+            "SELECT 1 FROM app_settings WHERE key = 'default_surcharge_percent'"
+        ).fetchone():
+            connection.execute(
+                "INSERT INTO app_settings (key, value) VALUES ('default_surcharge_percent', '10')"
+            )
+        if excel_path and Path(excel_path).exists():
             categories = load_categories(excel_path)
+            connection.execute("DELETE FROM categories")
             connection.executemany(
                 "INSERT INTO categories (name, surcharge_rate, minimum_profit) VALUES (?, ?, ?)",
                 [
@@ -65,6 +76,27 @@ def initialize_database(
                     for item in categories
                 ],
             )
+
+
+def get_default_surcharge_percent(db_path: str | Path) -> int:
+    with connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT value FROM app_settings WHERE key = 'default_surcharge_percent'"
+        ).fetchone()
+    if row is None:
+        return 10
+    return int(row["value"])
+
+
+def set_default_surcharge_percent(db_path: str | Path, percent: int) -> None:
+    if percent < 10 or percent > 100 or percent % 10 != 0:
+        raise ValueError("El porcentaje debe estar entre 10% y 100% en múltiplos de 10.")
+    with connect(db_path) as connection:
+        connection.execute(
+            "INSERT INTO app_settings (key, value) VALUES ('default_surcharge_percent', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (str(percent),),
+        )
 
 
 def get_categories(db_path: str | Path) -> list[dict[str, Any]]:
